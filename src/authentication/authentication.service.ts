@@ -51,7 +51,7 @@ export class AuthenticationService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.role, name: user.name };
     const { password, ...userWithoutPassword } = user;
     return {
       message: '',

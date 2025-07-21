@@ -47,9 +47,11 @@ export class AuthenticationController {
   }
   @UseGuards(AuthenticationGuard)
   @Get('profile')
-  getProfile(@Request() req: { user: JwtPayload }): Partial<JwtPayload> {
-    const { sub, email, name, role } = req.user;
-    return { sub, email, name, role };
+  getProfile(@Request() req: { user: JwtPayload }): JwtPayload {
+    // const { sub, email, name } = req.user;
+    const { email, name } = req.user;
+    // return { sub, email, name };
+    return { email, name };
   }
 
   @UseGuards(AuthenticationGuard, RolesGuard)
