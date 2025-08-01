@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { Todo } from 'generated/prisma';
@@ -26,5 +28,18 @@ export class TodoController {
     @Param('userId', ParseIntPipe) userId: number,
   ): Promise<Todo[]> {
     return this.todoService.getTasksByUserId(userId);
+  }
+
+  @Delete(':id')
+  async deleteTask(@Param('id', ParseIntPipe) id: number): Promise<Todo> {
+    return this.todoService.deleteTask(id);
+  }
+
+  @Patch('update/:id')
+  async updateTaskStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: string,
+  ): Promise<Todo> {
+    return this.todoService.updateTaskStatus(id, status);
   }
 }

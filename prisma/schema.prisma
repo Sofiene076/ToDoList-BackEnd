@@ -15,14 +15,16 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String
-  todos     Todo[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  role      Role
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  password   String? // Make password optional
+  name       String
+  todos      Todo[]
+  provider   String? // "google", "github", etc. (null for email/password users)
+  providerId String? // Unique ID from OAuth (e.g., Google's 'sub')
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  role       Role
 }
 
 enum Role {
@@ -33,7 +35,7 @@ enum Role {
 model Todo {
   id        Int      @id @default(autoincrement())
   title     String
-  status    String   
+  status    String
   user      User     @relation(fields: [userId], references: [id])
   userId    Int
   createdAt DateTime @default(now())

@@ -44,11 +44,19 @@ export class UsersService {
       },
     });
   }
-  async  findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<User | null> {
     return this.dataBaseService.user.findUnique({
       where: {
-        email,  
+        email,
       },
     });
-  } 
+  }
+
+  async findByEmailOrProviderId(email: string, providerId: string) {
+    return this.dataBaseService.user.findFirst({
+      where: {
+        OR: [{ email }, { providerId }],
+      },
+    });
+  }
 }

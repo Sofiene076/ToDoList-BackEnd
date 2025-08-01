@@ -27,4 +27,17 @@ export class TodoService {
       where: { userId },
     });
   }
+
+  async deleteTask(id: number): Promise<Todo> {
+    return this.dataBaseService.todo.delete({
+      where: { id },
+    });
+  }
+
+  async updateTaskStatus(id: number, status: string): Promise<Todo> {
+    return this.dataBaseService.todo.update({
+      where: { id },
+      data: { status, updatedAt: new Date() },
+    });
+  }
 }

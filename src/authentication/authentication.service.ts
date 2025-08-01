@@ -46,19 +46,63 @@ export class AuthenticationService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    // Handle OAuth users (no password)
+    if (!user.password) {
+      throw new UnauthorizedException('Please sign in with Google');
+    }
+
+    // Handle email/password users
     const isMatch = await bcrypt.compare(signInDto.password, user.password);
     if (!isMatch) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { sub: user.id, email: user.email, role: user.role, name: user.name };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+    };
     const { password, ...userWithoutPassword } = user;
     return {
       message: '',
       access_token: await this.jwtService.signAsync(payload),
       user: userWithoutPassword,
     };
-    }
+  }
 
-   
+  async handleOAuthUser(profile: {
+    email: string;
+    name: string;
+    provider: string;
+    providerId: string;
+  }): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
+    let user = await this.UsersService.findByEmailOrProviderId(
+      profile.email,
+      profile.providerId,
+    );
+    if (!user) {
+      user = await this.UsersService.create({
+        email: profile.email,
+        name: profile.name,
+        provider: profile.provider,
+        providerId: profile.providerId,
+        role: 'USER', // Default role for OAuth users
+        password: null,
+      });
+    }
+    // Generate JWT
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+    };
+    const { password, ...userWithoutPassword } = user;
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+      user: userWithoutPassword,
+    };
+  }
 }
