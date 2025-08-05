@@ -10,22 +10,30 @@ import {
   Request,
   Res,
   Req,
+  Patch,
+  Param,
+  ParseIntPipe,
+  InternalServerErrorException,
+  BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthenticationService } from './authentication.service';
 import { SignInDto } from './dto/sign-In-Dto';
 import { signUpDto } from './dto/sign-up-dto';
-import { User } from 'generated/prisma';
+import { Prisma, User } from 'generated/prisma';
 import { AuthenticationGuard } from './authentication.guard';
 import { JwtPayload } from './entities/JwtPayload';
 import { Roles } from './roles.decorator';
 import { RolesGuard } from './roles.guard';
 import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
+import { UsersService } from 'src/users/users.service';
 // import { Reflector } from '@nestjs/core';
 @Controller('auth')
 export class AuthenticationController {
   constructor(
     private readonly authenticationService: AuthenticationService,
+    private readonly userService: UsersService,
     // private readonly reflector: Reflector,
   ) {}
   @HttpCode(HttpStatus.OK)
@@ -50,10 +58,8 @@ export class AuthenticationController {
   @UseGuards(AuthenticationGuard)
   @Get('profile')
   getProfile(@Request() req: { user: JwtPayload }): JwtPayload {
-    // const { sub, email, name } = req.user;
-    const { email, name } = req.user;
-    // return { sub, email, name };
-    return { email, name };
+    const { sub, email, name, provider = '' } = req.user;
+    return { sub, email, name, provider };
   }
 
   @UseGuards(AuthenticationGuard, RolesGuard)
@@ -88,8 +94,7 @@ export class AuthenticationController {
           email: result.user.email,
           name: result.user.name,
           id: result.user.id,
-          provider: result.user.provider, // Ajoutez le provider si nécessaire
-          // Excluez le mot de passe et autres infos sensibles
+          provider: result.user.provider,
         }),
       );
 
@@ -98,4 +103,43 @@ export class AuthenticationController {
       res.redirect('http://localhost:3001/login?error=oauth_failed');
     }
   }
+  // user.controller.ts
+@Patch('profile/:id')
+async updateUserProfile(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() updateData: {
+    name?: string;
+    email?: string;
+    currentPassword?: string;  // For verification
+    password?: string;        // New password to set
+  },
+): Promise<User> {
+  try {
+    // Filter out undefined values
+    const cleanData = Object.fromEntries(
+      Object.entries(updateData).filter(([_, v]) => v !== undefined)
+    );
+
+    return await this.userService.updateUser(id, cleanData);
+  } catch (error) {
+    console.error('Profile update error:', error);
+    
+    // Handle different error cases with appropriate HTTP status codes
+    if (error.message.includes('Current password is required')) {
+      throw new BadRequestException(error.message);
+    }
+    if (error.message.includes('Current password is incorrect')) {
+      throw new UnauthorizedException(error.message);
+    }
+    if (error.message.includes('User not found')) {
+      throw new BadRequestException(error.message);
+    }
+    if (error.message.includes('Password change not allowed')) {
+      throw new BadRequestException(error.message);
+    }
+
+    // Fallback to 500 error
+    throw new InternalServerErrorException('Failed to update profile');
+  }
+}
 }

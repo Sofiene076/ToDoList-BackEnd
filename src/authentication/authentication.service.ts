@@ -45,7 +45,7 @@ export class AuthenticationService {
     const user = await this.UsersService.findByEmail(signInDto.email);
     if (!user) {
       throw new NotFoundException('User not found');
-    }
+    } 
 
     // Handle OAuth users (no password)
     if (!user.password) {
@@ -75,30 +75,46 @@ export class AuthenticationService {
   async handleOAuthUser(profile: {
     email: string;
     name: string;
-    provider: string;
+    provider: string; // This comes from GoogleStrategy
     providerId: string;
   }): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
+    // 1. Find or create user
     let user = await this.UsersService.findByEmailOrProviderId(
       profile.email,
       profile.providerId,
     );
+
     if (!user) {
       user = await this.UsersService.create({
         email: profile.email,
         name: profile.name,
-        provider: profile.provider,
+        provider: profile.provider, // Make sure this is saved
         providerId: profile.providerId,
-        role: 'USER', // Default role for OAuth users
+        role: 'USER',
         password: null,
       });
     }
-    // Generate JWT
+
+    // 2. Verify the user has provider data
+    if (!user.provider) {
+      // Update existing user if provider was missing
+      user = await this.UsersService.updateProviderProviderId(
+        user.id,
+        profile.provider,
+        profile.providerId,
+      );
+    }
+
+    // 3. Generate JWT - use user.provider, not profile.provider
     const payload = {
       sub: user.id,
       email: user.email,
       role: user.role,
       name: user.name,
+      provider: user.provider, // Use the user's provider
+      providerId: user.providerId,
     };
+
     const { password, ...userWithoutPassword } = user;
     return {
       access_token: await this.jwtService.signAsync(payload),

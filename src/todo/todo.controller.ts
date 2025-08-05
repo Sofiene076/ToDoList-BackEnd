@@ -7,11 +7,14 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { Todo } from 'generated/prisma';
 import { TaskDto } from './dto/todo';
 import { TodoService } from './todo.service';
+import { AuthenticationGuard } from 'src/authentication/authentication.guard';
 
+@UseGuards(AuthenticationGuard)
 @Controller('todo')
 export class TodoController {
   constructor(private readonly todoService: TodoService) {}
@@ -22,7 +25,6 @@ export class TodoController {
     const { tasks, userId } = body;
     return this.todoService.createTasks(tasks, userId);
   }
-
   @Get(':userId')
   async getTasksByUserId(
     @Param('userId', ParseIntPipe) userId: number,
@@ -40,6 +42,6 @@ export class TodoController {
     @Param('id', ParseIntPipe) id: number,
     @Body('status') status: string,
   ): Promise<Todo> {
-    return this.todoService.updateTaskStatus(id, status);
+    return this.todoService.updateTaskStatus(+id, status);
   }
 }
